@@ -15,11 +15,13 @@ dat <- openesm::get_dataset("0060_beck")$data[, c("id", "compassionate", "respec
 
 head(dat)
 ```
+
 ```{r}
 library(dplyr)
 
 rename(dat, Ag1 = compassionate, Ag2 = respectful, Ag3 = finds_fault, Ag4 = little_sympathy, Ag5 = starts_arguments, Ag6 = forgiving, Ag7 = helpful, Ag8 = rude, Ag9 = suspicious, Ag10 = cold, Ag11 = polite, Ag12 = assumes_best)
 ```
+
 ```{r}
 dat %>%
   count(id, name = "n_datapoints")
@@ -32,4 +34,3 @@ write.csv(
   row.names = TRUE
 )
 ```
-
