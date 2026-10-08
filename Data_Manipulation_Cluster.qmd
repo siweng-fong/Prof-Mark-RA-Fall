@@ -1,0 +1,35 @@
+---
+title: "Data Manipulation"
+format: html
+editor: visual
+---
+
+## 
+
+```{r}
+install.packages("openesm")
+```
+
+```{r}
+dat <- openesm::get_dataset("0060_beck")$data[, c("id", "compassionate", "respectful", "finds_fault", "little_sympathy", "starts_arguments", "forgiving", "helpful", "rude", "suspicious", "cold", "polite", "assumes_best")]
+
+head(dat)
+```
+```{r}
+library(dplyr)
+
+rename(dat, Ag1 = compassionate, Ag2 = respectful, Ag3 = finds_fault, Ag4 = little_sympathy, Ag5 = starts_arguments, Ag6 = forgiving, Ag7 = helpful, Ag8 = rude, Ag9 = suspicious, Ag10 = cold, Ag11 = polite, Ag12 = assumes_best)
+```
+```{r}
+dat %>%
+  count(id, name = "n_datapoints")
+```
+
+```{r}
+write.csv(
+  dat,
+  file = "Multilevel_Agreeableness.csv",
+  row.names = TRUE
+)
+```
+
