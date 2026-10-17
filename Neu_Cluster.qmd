@@ -1,0 +1,69 @@
+---
+title: "Neuroticism"
+format: html
+editor: visual
+---
+
+```{r}
+dat_neu <- openesm::get_dataset("0001_fried")$data[, c("id", 
+"scheduled", "issued", "response", "difficulties_relaxing", "irritable", "worry", "nervous")]
+
+head(dat_neu)
+```
+
+```{r}
+dat_neu %>%
+  tidyr::drop_na("difficulties_relaxing") |>
+  count(id, name = "n_datapoints")
+```
+
+```{r}
+library(lavaan)
+library(clustinvar)
+```
+
+```{r}
+dat_neu <- dplyr::rename(dat_neu,
+              neu.1 = difficulties_relaxing,
+              neu.2 = irritable,
+              neu.3 = worry,
+              neu.4 = nervous)
+```
+
+```{r}
+names(dat_neu)
+```
+
+```{r}
+model <- '
+level: 1
+neu =~ neu.1 + neu.2 + neu.3 + neu.4
+
+level:2
+neu.1 ~~ neu.2 + neu.3 + neu.4
+neu.2 ~~ neu.3 + neu.4
+neu.3 ~~ neu.4
+'
+
+fit <- cfa(
+  model,
+  data = dat_neu,
+  cluster = "id"
+)
+```
+
+```{r}
+summary(fit, fit.measures = TRUE)
+```
+
+```{r}
+config_results <- cluster_fit(
+  fit,
+  fit._measures = c("chisq", "df", "pvalue", "rmsea", "cfi", "srmr"),
+  constraint = "none",
+  check.gradient = FALSE,
+  warn = FALSE
+)
+
+head(config_results)
+```
