@@ -20,6 +20,7 @@ dat_neu %>%
 ```{r}
 library(lavaan)
 library(clustinvar)
+library(dplyr)
 ```
 
 ```{r}
@@ -67,3 +68,77 @@ config_results <- cluster_fit(
 
 head(config_results)
 ```
+```{r}
+metric_results <- cluster_fit(
+  fit,
+  fit_measures = c("chisq", "df", "pvalue", "rmsea", "srmr"),
+  constraint = "loadings",
+  check.gradient = FALSE,
+  warn = FALSE
+)
+
+head(metric_results)
+```
+
+```{r}
+lv_variance_results <- cluster_fit(
+  fit,
+  fit_measures = c("chisq", "df", "pvalue", "rmsea", "srmr"),
+  constraint = "lv.variances",
+  check.gradient = FALSE,
+  warn = FALSE
+)
+
+head(lv_variance_results)
+```
+
+```{r}
+residuals_results <- cluster_fit(
+  fit,
+  fit_measures = c("chisq", "df", "pvalue", "rmsea", "srmr"),
+  constraint = "residuals",
+  check.gradient = FALSE,
+  warn = FALSE
+)
+
+head(residuals_results)
+```
+
+```{r}
+homogeneity_results <- cluster_fit(
+  fit,
+  fit_measures = c("chisq", "df", "pvalue", "rmsea", "srmr"),
+  constraint = "all",
+  check.gradient = FALSE,
+  warn = FALSE
+)
+
+head(homogeneity_results)
+```
+```{r}
+subset(homogeneity_results, rmsea.swain < 0.80)
+```
+```{r}
+pool_cluster_chisq(config_results)
+```
+```{r}
+fit_robust <- cfa(
+model,
+data = dat_neu,
+cluster = "cluster",
+estimator = "MLR"
+)
+
+scaled_results <- cluster_fit(
+  fit_robust,
+  constraint = "None",
+  check.gradient = FALSE,
+  warn = FALSE
+)
+
+head(scaled_results)
+
+omnibus_result <- pool_cluster_chisq(scaled_results)
+print(omnibus_result)
+```
+
