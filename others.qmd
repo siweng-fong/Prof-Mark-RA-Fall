@@ -1,0 +1,186 @@
+---
+title: "Others"
+format: html
+editor: visual
+---
+```{r}
+dat_mind <- openesm::get_dataset("0059_blanke")$data[, c("id", "attention_present", "opened_up", "concentrated_present", "nonjudgmental_feelings", "nonjudgmental_thoughts", "nonjudgmental_behavior")]
+
+head(dat_mind)
+```
+
+```{r}
+dat_mind$mind <- rowMeans(
+  dat_mind[, c("mind.1","mind.2","mind.3","mind.4", "mind.5","mind.6")],
+  na.rm = TRUE
+)
+
+library(lme4)
+
+m0 <- lmer(
+  mind ~ 1 + (1|id),
+  data = dat_mind
+)
+
+library(performance)
+
+icc(m0)
+
+VarCorr(m0)
+```
+
+```{r}
+dat_mind %>%
+  tidyr::drop_na("mind.1") |>
+  count(id, name = "n_datapoints")
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+obs_count <- dat_mind %>%
+  count(id)
+
+ggplot(obs_count,
+       aes(x = n)) +
+  geom_histogram(binwidth = 1,
+                 color = "black",
+                 fill = "skyblue") +
+  labs(
+    title = "Distribution of Observations per Person",
+    x = "Number of Observations",
+    y = "Number of Participants"
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+library(dplyr)
+
+dat_mind <- dat_mind |>
+  dplyr::rename(mind.1 = attention_present,
+                mind.2 = opened_up,
+                mind.3 = concentrated_present,
+                mind.4 = nonjudgmental_feelings,
+                mind.5 = nonjudgmental_thoughts,
+                mind.6 = nonjudgmental_behavior)
+```
+
+
+
+```{r}
+library(tidyr)
+
+dat_mind %>%
+  tidyr::drop_na("mind.1") |>
+  count(id, name = "n_datapoints")
+```
+```{r}
+descriptives_mind <- psych::describe(
+  dplyr::select(dat_mind,
+                mind.1, mind.2, mind.3, mind.4, mind.5, mind.6)
+)
+
+View(descriptives_mind)
+```
+
+```{r}
+model_mind <- '
+level: 1
+mind =~ mind.1 + mind.2 + mind.3 + mind.4 + mind.5 + mind.6
+
+level:2
+mind.1 ~~ mind.2 + mind.3 + mind.4 + mind.5 + mind.6
+mind.2 ~~ mind.3 + mind.4 + mind.5 + mind.6
+mind.3 ~~ mind.4 + mind.5 + mind.6
+mind.4 ~~ mind.5 + mind.6
+mind.5 ~~ mind.6 
+'
+
+fit_mind <- cfa(
+  model_mind,
+  data = dat_mind,
+  cluster = "id"
+)
+```
+```{r}
+config_results_mind <- cluster_fit(
+  fit_mind,
+  fit._measures = c("chisq", "df", "pvalue", "rmsea", "cfi", "mindmr"),
+  constraint = "none",
+  check.gradient = FALSE,
+  warn = FALSE
+)
+
+head(config_results_mind)
+```
+-----------------------
+```{r}
+dat_auto <- openesm::get_dataset("0062_neubauer")$data[, c("id", "own_way", "true_self", "pressure", "told_what_to_do", "against_own_will", "did_interesting")]
+
+head(dat_auto)
+```
+
+```{r}
+dat_auto$auto <- rowMeans(
+  dat_auto[, c("own_way","true_self","pressure","told_what_to_do", "against_own_will","did_interesting")],
+  na.rm = TRUE
+)
+
+library(lme4)
+
+m0 <- lmer(
+  auto ~ 1 + (1|id),
+  data = dat_auto
+)
+
+library(performance)
+
+icc(m0)
+
+VarCorr(m0)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+obs_count <- dat_auto %>%
+  count(id)
+
+ggplot(obs_count,
+       aes(x = n)) +
+  geom_histogram(binwidth = 1,
+                 color = "black",
+                 fill = "skyblue") +
+  labs(
+    title = "Distribution of Observations per Person",
+    x = "Number of Observations",
+    y = "Number of Participants"
+  ) +
+  theme_minimal()
+```
+```
+
+
+```{r}
+library(tidyr)
+
+dat_auto %>%
+  tidyr::drop_na("true_self") |>
+  count(id, name = "n_datapoints")
+```
+```{r}
+descriptives_auto <- psych::describe(
+  dplyr::select(dat_auto,
+                auto.1, auto.2, auto.3, )
+)
+```
+
+
+
+# 
+0059 - mindfulness
+0062 - autonomy

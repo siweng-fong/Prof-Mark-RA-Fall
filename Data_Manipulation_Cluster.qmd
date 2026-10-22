@@ -11,7 +11,7 @@ install.packages("openesm")
 ```
 
 ```{r}
-dat <- openesm::get_dataset("0060_beck")$data[, c("id", "compassionate", "respectful", "finds_fault", "little_sympathy", "starts_arguments", "forgiving", "helpful", "rude", "suspicious", "cold", "polite", "assumes_best")]
+dat <- openesm::get_dataset("0060_beck")$data[, c("id", "day", "hour", "compassionate", "respectful", "finds_fault", "little_sympathy", "starts_arguments", "forgiving", "helpful", "rude", "suspicious", "cold", "polite", "assumes_best")]
 
 head(dat)
 ```
@@ -33,4 +33,8 @@ write.csv(
   file = "Multilevel_Agreeableness.csv",
   row.names = TRUE
 )
+```
+
+```{r}
+pak::pak("marklhc/clustinvar")
 ```

@@ -12,8 +12,51 @@ head(dat_neu)
 ```
 
 ```{r}
+dat_neu$neu <- rowMeans(
+  dat_neu[, c("neu.1","neu.2","neu.3","neu.4")],
+  na.rm = TRUE
+)
+
+library(lme4)
+
+m0 <- lmer(
+  neu ~ 1 + (1|id),
+  data = dat_neu
+)
+
+library(performance)
+
+icc(m0)
+
+VarCorr(m0)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+obs_count <- dat_neu %>%
+  count(id)
+
+ggplot(obs_count,
+       aes(x = n)) +
+  geom_histogram(binwidth = 1,
+                 color = "black",
+                 fill = "skyblue") +
+  labs(
+    title = "Distribution of Observations per Person",
+    x = "Number of Observations",
+    y = "Number of Participants"
+  ) +
+  theme_minimal()
+```
+```
+
+
+
+```{r}
 dat_neu %>%
-  tidyr::drop_na("difficulties_relaxing") |>
+  tidyr::drop_na("neu.1") |>
   count(id, name = "n_datapoints")
 ```
 
@@ -76,6 +119,7 @@ config_results <- cluster_fit(
   fit._measures = c("chisq", "df", "pvalue", "rmsea", "cfi", "srmr"),
   constraint = "none",
   check.gradient = FALSE,
+  estimator = "ML",
   warn = FALSE
 )
 
@@ -87,6 +131,8 @@ metric_results <- cluster_fit(
   fit_measures = c("chisq", "df", "pvalue", "rmsea", "srmr"),
   constraint = "loadings",
   check.gradient = FALSE,
+  estimator = "ML",
+  missing = "FIML",
   warn = FALSE
 )
 
@@ -99,6 +145,8 @@ lv_variance_results <- cluster_fit(
   fit_measures = c("chisq", "df", "pvalue", "rmsea", "srmr"),
   constraint = "lv.variances",
   check.gradient = FALSE,
+  estimator = "ML",
+  missing = "FIML",
   warn = FALSE
 )
 
@@ -111,6 +159,8 @@ residuals_results <- cluster_fit(
   fit_measures = c("chisq", "df", "pvalue", "rmsea", "srmr"),
   constraint = "residuals",
   check.gradient = FALSE,
+  estimator = "ML",
+  missing = "FIML",
   warn = FALSE
 )
 
@@ -123,6 +173,8 @@ homogeneity_results <- cluster_fit(
   fit_measures = c("chisq", "df", "pvalue", "rmsea", "srmr"),
   constraint = "all",
   check.gradient = FALSE,
+  estimator = "ML",
+  missing = "FIML",
   warn = FALSE
 )
 
@@ -134,12 +186,14 @@ subset(homogeneity_results, rmsea.swain < 0.80)
 ```{r}
 pool_cluster_chisq(config_results)
 ```
+
 ```{r}
 fit_robust <- cfa(
 model,
 data = dat_neu,
 cluster = "cluster",
-estimator = "MLR"
+estimator = "MLR",
+missing = "FIML",
 )
 
 scaled_results <- cluster_fit(
@@ -154,4 +208,5 @@ head(scaled_results)
 omnibus_result <- pool_cluster_chisq(scaled_results)
 print(omnibus_result)
 ```
+
 
