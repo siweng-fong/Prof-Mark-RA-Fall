@@ -11,6 +11,15 @@ dat_neu <- openesm::get_dataset("0001_fried")$data[, c("id",
 head(dat_neu)
 ```
 
+
+```{r}
+dat_neu <- dplyr::rename(dat_neu,
+              neu.1 = difficulties_relaxing,
+              neu.2 = irritable,
+              neu.3 = worry,
+              neu.4 = nervous)
+```
+
 ```{r}
 dat_neu$neu <- rowMeans(
   dat_neu[, c("neu.1","neu.2","neu.3","neu.4")],
@@ -67,14 +76,6 @@ library(dplyr)
 ```
 
 ```{r}
-dat_neu <- dplyr::rename(dat_neu,
-              neu.1 = difficulties_relaxing,
-              neu.2 = irritable,
-              neu.3 = worry,
-              neu.4 = nervous)
-```
-
-```{r}
 names(dat_neu)
 ```
 
@@ -94,7 +95,7 @@ View(descriptives)
 ```{r}
 model <- '
 level: 1
-neu =~ neu.1 + neu.2 + neu.3 + neu.4
+fw =~ neu.1 + neu.2 + neu.3 + neu.4
 
 level:2
 neu.1 ~~ neu.2 + neu.3 + neu.4
@@ -114,9 +115,10 @@ summary(fit, fit.measures = TRUE)
 ```
 
 ```{r}
+library(clustinvar)
 config_results <- cluster_fit(
   fit,
-  fit._measures = c("chisq", "df", "pvalue", "rmsea", "cfi", "srmr"),
+  fit_measures = c("chisq", "df", "pvalue", "rmsea", "cfi", "srmr"),
   constraint = "none",
   check.gradient = FALSE,
   estimator = "ML",
@@ -132,7 +134,6 @@ metric_results <- cluster_fit(
   constraint = "loadings",
   check.gradient = FALSE,
   estimator = "ML",
-  missing = "FIML",
   warn = FALSE
 )
 
