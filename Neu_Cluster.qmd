@@ -59,9 +59,6 @@ ggplot(obs_count,
   ) +
   theme_minimal()
 ```
-```
-
-
 
 ```{r}
 dat_neu %>%
@@ -106,7 +103,9 @@ neu.3 ~~ neu.4
 fit <- cfa(
   model,
   data = dat_neu,
-  cluster = "id"
+  cluster = "id",
+  estimator = "MLR",
+  missing = "default"
 )
 ```
 
@@ -121,7 +120,8 @@ config_results <- cluster_fit(
   fit_measures = c("chisq", "df", "pvalue", "rmsea", "cfi", "srmr"),
   constraint = "none",
   check.gradient = FALSE,
-  estimator = "ML",
+  estimator = "MLR",
+  missing = "default",
   warn = FALSE
 )
 
@@ -133,7 +133,8 @@ metric_results <- cluster_fit(
   fit_measures = c("chisq", "df", "pvalue", "rmsea", "srmr"),
   constraint = "loadings",
   check.gradient = FALSE,
-  estimator = "ML",
+  estimator = "MLR",
+  missing = "default",
   warn = FALSE
 )
 
@@ -146,8 +147,8 @@ lv_variance_results <- cluster_fit(
   fit_measures = c("chisq", "df", "pvalue", "rmsea", "srmr"),
   constraint = "lv.variances",
   check.gradient = FALSE,
-  estimator = "ML",
-  missing = "FIML",
+  estimator = "MLR",
+  missing = "default",
   warn = FALSE
 )
 
@@ -160,8 +161,8 @@ residuals_results <- cluster_fit(
   fit_measures = c("chisq", "df", "pvalue", "rmsea", "srmr"),
   constraint = "residuals",
   check.gradient = FALSE,
-  estimator = "ML",
-  missing = "FIML",
+  estimator = "MLR",
+  missing = "default",
   warn = FALSE
 )
 
@@ -174,8 +175,8 @@ homogeneity_results <- cluster_fit(
   fit_measures = c("chisq", "df", "pvalue", "rmsea", "srmr"),
   constraint = "all",
   check.gradient = FALSE,
-  estimator = "ML",
-  missing = "FIML",
+  estimator = "MLR",
+  missing = "default",
   warn = FALSE
 )
 
@@ -192,9 +193,9 @@ pool_cluster_chisq(config_results)
 fit_robust <- cfa(
 model,
 data = dat_neu,
-cluster = "cluster",
+cluster = "id",
 estimator = "MLR",
-missing = "FIML",
+missing = "default"
 )
 
 scaled_results <- cluster_fit(
@@ -208,6 +209,46 @@ head(scaled_results)
 
 omnibus_result <- pool_cluster_chisq(scaled_results)
 print(omnibus_result)
+```
+---------------------
+```{r}
+View(
+     config_results[
+         config_results$pvalue.adj < .05,
+     ]
+ )
+
+View(
+     metric_results[
+         metric_results$pvalue.adj < .05,
+     ]
+ )
+
+View(
+     lv_variance_results[
+         lv_variance_results$pvalue.adj < .05,
+     ]
+ )
+
+View(
+     residuals_results[
+         residuals_results$pvalue.adj < .05,
+     ]
+ )
+
+View(
+     homogeneity_results[
+         homogeneity_results$pvalue.adj < .05,
+     ]
+ )
+```
+
+```{r}
+nrow(config_results[config_results$pvalue.adj < .05, ])
+nrow(metric_results[metric_results$pvalue.adj < .05, ])
+nrow(lv_variance_results[lv_variance_results$pvalue.adj < .05, ])
+nrow(residuals_results[residuals_results$pvalue.adj < .05, ])
+nrow(homogeneity_results[homogeneity_results$pvalue.adj < .05, ])
 ```
 
 
