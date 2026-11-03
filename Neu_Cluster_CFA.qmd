@@ -33,11 +33,39 @@ m0 <- lmer(
   data = dat_neu
 )
 
+m1 <- lmer(
+  neu.1 ~ 1 + (1|id),
+  data = dat_neu
+)
+
+m2 <- lmer(
+  neu.2 ~ 1 + (1|id),
+  data = dat_neu
+)
+
+m3 <- lmer(
+  neu.3 ~ 1 + (1|id),
+  data = dat_neu
+)
+
+m4 <- lmer(
+  neu.4 ~ 1 + (1|id),
+  data = dat_neu
+)
+
 library(performance)
 
 icc(m0)
+icc(m1)
+icc(m2)
+icc(m3)
+icc(m4)
 
 VarCorr(m0)
+VarCorr(m1)
+VarCorr(m2)
+VarCorr(m3)
+VarCorr(m4)
 ```
 
 ```{r}
@@ -93,6 +121,7 @@ View(descriptives)
 model <- '
 level: 1
 fw =~ neu.1 + neu.2 + neu.3 + neu.4
+neu.1 ~~ neu.2
 
 level:2
 neu.1 ~~ neu.2 + neu.3 + neu.4
@@ -105,8 +134,9 @@ fit <- cfa(
   data = dat_neu,
   cluster = "id",
   estimator = "MLR",
-  missing = "default"
+  missing = "FIML"
 )
+modindices(fit, sort = TRUE, min = 3.84)
 ```
 
 ```{r}
@@ -121,7 +151,7 @@ config_results <- cluster_fit(
   constraint = "none",
   check.gradient = FALSE,
   estimator = "MLR",
-  missing = "default",
+  missing = "FIML",
   warn = FALSE
 )
 
@@ -134,7 +164,7 @@ metric_results <- cluster_fit(
   constraint = "loadings",
   check.gradient = FALSE,
   estimator = "MLR",
-  missing = "default",
+  missing = "FIML",
   warn = FALSE
 )
 
@@ -148,7 +178,7 @@ lv_variance_results <- cluster_fit(
   constraint = "lv.variances",
   check.gradient = FALSE,
   estimator = "MLR",
-  missing = "default",
+  missing = "FIML",
   warn = FALSE
 )
 
@@ -162,7 +192,7 @@ residuals_results <- cluster_fit(
   constraint = "residuals",
   check.gradient = FALSE,
   estimator = "MLR",
-  missing = "default",
+  missing = "FIML",
   warn = FALSE
 )
 
@@ -170,13 +200,14 @@ head(residuals_results)
 ```
 
 ```{r}
+#intercept not constraint
 homogeneity_results <- cluster_fit(
   fit,
   fit_measures = c("chisq", "df", "pvalue", "rmsea", "srmr"),
   constraint = "all",
   check.gradient = FALSE,
   estimator = "MLR",
-  missing = "default",
+  missing = "FIML",
   warn = FALSE
 )
 
@@ -195,12 +226,12 @@ model,
 data = dat_neu,
 cluster = "id",
 estimator = "MLR",
-missing = "default"
+missing = "FIML"
 )
 
 scaled_results <- cluster_fit(
   fit_robust,
-  constraint = "None",
+  constraint = "none",
   check.gradient = FALSE,
   warn = FALSE
 )
@@ -214,41 +245,41 @@ print(omnibus_result)
 ```{r}
 View(
      config_results[
-         config_results$pvalue.adj < .05,
+         config_results$pvalue.swain.adj < .05,
      ]
  )
 
 View(
      metric_results[
-         metric_results$pvalue.adj < .05,
+         metric_results$pvalue.swain.adj < .05,
      ]
  )
 
 View(
      lv_variance_results[
-         lv_variance_results$pvalue.adj < .05,
+         lv_variance_results$pvalue.swain.adj < .05,
      ]
  )
 
 View(
      residuals_results[
-         residuals_results$pvalue.adj < .05,
+         residuals_results$pvalue.swain.adj < .05,
      ]
  )
 
 View(
      homogeneity_results[
-         homogeneity_results$pvalue.adj < .05,
+         homogeneity_results$pvalue.swain.adj < .05,
      ]
  )
 ```
 
 ```{r}
-nrow(config_results[config_results$pvalue.adj < .05, ])
-nrow(metric_results[metric_results$pvalue.adj < .05, ])
-nrow(lv_variance_results[lv_variance_results$pvalue.adj < .05, ])
-nrow(residuals_results[residuals_results$pvalue.adj < .05, ])
-nrow(homogeneity_results[homogeneity_results$pvalue.adj < .05, ])
+nrow(config_results[config_results$pvalue.swain.adj < .05, ])
+nrow(metric_results[metric_results$pvalue.swain.adj < .05, ])
+nrow(lv_variance_results[lv_variance_results$pvalue.swain.adj < .05, ])
+nrow(residuals_results[residuals_results$pvalue.swain.adj < .05, ])
+nrow(homogeneity_results[homogeneity_results$pvalue.swain.adj < .05, ])
 ```
 
 
