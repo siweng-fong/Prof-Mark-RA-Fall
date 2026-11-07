@@ -1,0 +1,365 @@
+---
+title: "Neu_pooling cluster-level"
+format: html
+editor: visual
+---
+
+```{r}
+dat_neu <- openesm::get_dataset("0001_fried")$data[, c("id", 
+"scheduled", "issued", "response", "difficulties_relaxing", "irritable", "worry", "nervous")]
+
+head(dat_neu)
+```
+
+```{r}
+dat_neu <- dplyr::rename(dat_neu,
+              neu.1 = difficulties_relaxing,
+              neu.2 = irritable,
+              neu.3 = worry,
+              neu.4 = nervous)
+```
+
+```{r}
+dat_neu$neu <- rowMeans(
+  dat_neu[, c("neu.1","neu.2","neu.3","neu.4")],
+  na.rm = TRUE
+)
+```
+
+```{r}
+library(lavaan)
+library(clustinvar)
+library(dplyr)
+```
+
+```{r}
+model <- '
+level: 1
+fw =~ neu.1 + neu.2 + neu.3 + neu.4
+
+level:2
+neu.1 ~~ neu.2 + neu.3 + neu.4
+neu.2 ~~ neu.3 + neu.4
+neu.3 ~~ neu.4
+'
+
+items <- c("neu.1", "neu.2", "neu.3", "neu.4")
+
+fit <- cfa(
+  model,
+  data = dat_neu,
+  cluster = "id",
+  estimator = "MLR",
+  missing = "FIML"
+)
+modindices(fit, sort = TRUE, min = 3.84)
+```
+
+```{r}
+config_results <- cluster_fit(
+  fit,
+  fit_measures = c("chisq.scaled", "rmsea.robust", "cfi.robust", "srmr"),
+  constraint = "none",
+  check.gradient = FALSE,
+  warn = FALSE,
+  likelihood = "normal",
+  return_lavaan = TRUE
+)
+
+saveRDS(config_results, "neu_config_results_pooling.rds")
+
+config_results
+```
+```{r}
+pooled_mi <- pool_cluster_mi(config_results, op = "~~")
+pooled_mi[, c(
+  "lhs", "op", "rhs", "n_clusters", "mi.pooled", "df.pooled", "p.value", "p.value.adj", "median_sepc.all", "n_sepc", "proportion_epc_positive"
+)]
+```
+```{r}
+top_candidate <- pooled_mi[1, c("lhs", "op", "rhs")]
+top_candidate
+```
+
+```{r}
+fits <- cluster_lavaan_fits(config_results)
+contributing_clusters <- pooled_mi$clusters[[1]]
+
+participant_mi <- do.call(rbind, lapply(contributing_clusters, function(id) {
+  fit <- fits[[id]]
+  mi <- lavaan::modindices(fit, op = top_candidate$op)
+  keep <- mi$lhs == top_candidate$lhs &
+    mi$op == top_candidate$op &
+    mi$rhs == top_candidate$rhs
+  if (!any(keep)) return(NULL)
+  data.frame(
+    cluster = id,
+    mi = mi$mi[keep][1],
+    sepc.all = mi$sepc.all[keep][1]
+  )
+}))
+
+participant_mi <- participant_mi[is.finite(participant_mi$mi), ]
+summary(participant_mi[, c("mi", "sepc.all")])
+```
+```{r}
+old_par <- par(mfrow = c(2, 1))
+participant_id <- as.numeric(as.character(participant_mi$cluster))
+plot(
+  participant_id, participant_mi$mi,
+  xlab = "Participant (cluster ID)", ylab = "Modification index",
+  main = paste(top_candidate$lhs, top_candidate$op, top_candidate$rhs),
+  type = "h", col = "steelblue"
+)
+points(participant_id, participant_mi$mi, pch = 1, col = "steelblue")
+plot(
+  participant_id, participant_mi$sepc.all,
+  xlab = "Participant (cluster ID)", ylab = "Standardized EPC",
+  type = "h", col = "darkorange"
+)
+points(participant_id, participant_mi$sepc.all, pch = 1, col = "darkorange")
+```
+```{r}
+par(old_par)
+```
+
+```{r}
+fits <- cluster_lavaan_fits(config_results)
+fits <- fits[vapply(fits, inherits, logical(1), what = "lavaan")]
+dat_neu <- do.call(rbind, lapply(names(fits), function(id) {
+  participant_data <- as.data.frame(lavaan::lavInspect(fits[[id]], "data"))
+  participant_data <- participant_data[, items, drop = FALSE]
+  participant_data$participant <- id
+  participant_data
+}))
+rownames(dat_neu) <- NULL
+
+freed_path <- paste(top_candidate$lhs, top_candidate$op, top_candidate$rhs)
+model_freed <- paste(
+  "fw =~ neu.1 + neu.2 + neu.3 + neu.4",
+  freed_path,
+  sep = "\n"
+)
+
+neu_freed <- cluster_fit(
+  dat_neu,
+  cluster = "participant",
+  model = model_freed,
+  constraint = "none",
+  fit_measures = c("chisq.scaled", "rmsea.robust", "cfi.robust", "srmr"),
+  swain_correction = TRUE,
+  estimator = "MLR",
+  missing = "fiml",
+  likelihood = "normal",
+  warn = FALSE,
+  check.gradient = FALSE
+)
+```
+```{r}
+stopifnot(identical(
+  paste(top_candidate$lhs, top_candidate$op, top_candidate$rhs),
+  "neu.3 ~~ neu.4"
+))
+
+common_ids <- intersect(
+  as.character(config_results$cluster[config_results$admissible]),
+  as.character(neu_freed$cluster[neu_freed$admissible])
+)
+
+base_pooled <- pool_cluster_chisq(
+  config_results[as.character(config_results$cluster) %in% common_ids, , drop = FALSE],
+  chisq_col = "chisq.scaled", use_swain = TRUE
+)
+freed_pooled <- pool_cluster_chisq(
+  neu_freed[as.character(neu_freed$cluster) %in% common_ids, , drop = FALSE],
+  chisq_col = "chisq.scaled", use_swain = TRUE
+)
+
+rbind(
+  data.frame(model = "original", base_pooled),
+  data.frame(model = "freed path", freed_pooled)
+)
+```
+-------------------
+-------------------
+```{r}
+dat_neu <- openesm::get_dataset("0001_fried")$data[, c("id", 
+"scheduled", "issued", "response", "difficulties_relaxing", "irritable", "worry", "nervous")]
+
+head(dat_neu)
+```
+```{r}
+dat_neu <- dplyr::rename(dat_neu,
+              neu.1 = difficulties_relaxing,
+              neu.2 = irritable,
+              neu.3 = worry,
+              neu.4 = nervous)
+```
+
+
+```{r}
+model <- '
+level: 1
+fw =~ neu.1 + neu.2 + neu.3 + neu.4
+neu.3 ~~ neu.4
+
+level:2
+neu.1 ~~ neu.2 + neu.3 + neu.4
+neu.2 ~~ neu.3 + neu.4
+neu.3 ~~ neu.4
+'
+
+items <- c("neu.1", "neu.2", "neu.3", "neu.4")
+
+fit <- cfa(
+  model,
+  data = dat_neu,
+  cluster = "id",
+  estimator = "MLR",
+  missing = "FIML"
+)
+```
+
+
+```{r}
+config_results <- cluster_fit(
+  fit,
+  fit_measures = c("chisq.scaled", "rmsea.robust", "cfi.robust", "srmr"),
+  constraint = "none",
+  check.gradient = FALSE,
+  warn = FALSE,
+  likelihood = "normal",
+  return_lavaan = TRUE
+)
+saveRDS(config_results, "neu_config_results2.rds")
+
+modindices(fit, sort = TRUE, min = 3.84)
+```
+
+```{r}
+config_results <- cluster_fit(
+  fit,
+  fit_measures = c("chisq.scaled", "rmsea.robust", "cfi.robust", "srmr"),
+  constraint = "none",
+  check.gradient = FALSE,
+  warn = FALSE,
+  likelihood = "normal",
+  return_lavaan = TRUE
+)
+
+saveRDS(config_results, "neu_config_results_pooling.rds")
+
+config_results
+```
+```{r}
+pooled_mi <- pool_cluster_mi(config_results, op = "~~")
+pooled_mi[, c(
+  "lhs", "op", "rhs", "n_clusters", "mi.pooled", "df.pooled", "p.value", "p.value.adj", "median_sepc.all", "n_sepc", "proportion_epc_positive"
+)]
+```
+```{r}
+top_candidate <- pooled_mi[1, c("lhs", "op", "rhs")]
+top_candidate
+```
+
+```{r}
+fits <- cluster_lavaan_fits(config_results)
+contributing_clusters <- pooled_mi$clusters[[1]]
+
+participant_mi <- do.call(rbind, lapply(contributing_clusters, function(id) {
+  fit <- fits[[id]]
+  mi <- lavaan::modindices(fit, op = top_candidate$op)
+  keep <- mi$lhs == top_candidate$lhs &
+    mi$op == top_candidate$op &
+    mi$rhs == top_candidate$rhs
+  if (!any(keep)) return(NULL)
+  data.frame(
+    cluster = id,
+    mi = mi$mi[keep][1],
+    sepc.all = mi$sepc.all[keep][1]
+  )
+}))
+
+participant_mi <- participant_mi[is.finite(participant_mi$mi), ]
+summary(participant_mi[, c("mi", "sepc.all")])
+```
+```{r}
+old_par <- par(mfrow = c(2, 1))
+participant_id <- as.numeric(as.character(participant_mi$cluster))
+plot(
+  participant_id, participant_mi$mi,
+  xlab = "Participant (cluster ID)", ylab = "Modification index",
+  main = paste(top_candidate$lhs, top_candidate$op, top_candidate$rhs),
+  type = "h", col = "steelblue"
+)
+points(participant_id, participant_mi$mi, pch = 1, col = "steelblue")
+plot(
+  participant_id, participant_mi$sepc.all,
+  xlab = "Participant (cluster ID)", ylab = "Standardized EPC",
+  type = "h", col = "darkorange"
+)
+points(participant_id, participant_mi$sepc.all, pch = 1, col = "darkorange")
+```
+```{r}
+par(old_par)
+```
+
+```{r}
+fits <- cluster_lavaan_fits(config_results)
+fits <- fits[vapply(fits, inherits, logical(1), what = "lavaan")]
+dat_neu <- do.call(rbind, lapply(names(fits), function(id) {
+  participant_data <- as.data.frame(lavaan::lavInspect(fits[[id]], "data"))
+  participant_data <- participant_data[, items, drop = FALSE]
+  participant_data$participant <- id
+  participant_data
+}))
+rownames(dat_neu) <- NULL
+
+freed_path <- paste(top_candidate$lhs, top_candidate$op, top_candidate$rhs)
+model_freed <- paste(
+  "fw =~ neu.1 + neu.2 + neu.3 + neu.4",
+  freed_path,
+  sep = "\n"
+)
+
+neu_freed <- cluster_fit(
+  dat_neu,
+  cluster = "participant",
+  model = model_freed,
+  constraint = "none",
+  fit_measures = c("chisq.scaled", "rmsea.robust", "cfi.robust", "srmr"),
+  swain_correction = TRUE,
+  estimator = "MLR",
+  missing = "fiml",
+  likelihood = "normal",
+  warn = FALSE,
+  check.gradient = FALSE
+)
+```
+```{r}
+stopifnot(identical(
+  paste(top_candidate$lhs, top_candidate$op, top_candidate$rhs),
+  "neu.2 ~~ neu.3"
+))
+
+common_ids <- intersect(
+  as.character(config_results$cluster[config_results$admissible]),
+  as.character(neu_freed$cluster[neu_freed$admissible])
+)
+
+base_pooled <- pool_cluster_chisq(
+  config_results[as.character(config_results$cluster) %in% common_ids, , drop = FALSE],
+  chisq_col = "chisq.scaled", use_swain = TRUE
+)
+freed_pooled <- pool_cluster_chisq(
+  neu_freed[as.character(neu_freed$cluster) %in% common_ids, , drop = FALSE],
+  chisq_col = "chisq.scaled", use_swain = TRUE
+)
+
+rbind(
+  data.frame(model = "original", base_pooled),
+  data.frame(model = "freed path", freed_pooled)
+)
+```
+
+
