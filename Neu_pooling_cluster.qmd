@@ -76,6 +76,7 @@ pooled_mi[, c(
   "lhs", "op", "rhs", "n_clusters", "mi.pooled", "df.pooled", "p.value", "p.value.adj", "median_sepc.all", "n_sepc", "proportion_epc_positive"
 )]
 ```
+
 ```{r}
 top_candidate <- pooled_mi[1, c("lhs", "op", "rhs")]
 top_candidate
@@ -156,7 +157,7 @@ neu_freed <- cluster_fit(
   check.gradient = FALSE
 )
 
-View(neu_freed)
+neu_freed
 ```
 
 ```{r}
@@ -212,14 +213,6 @@ pooled_mi_metric <- pool_cluster_mi(metric_results, op = "=~")
 pooled_mi_metric[, c(
   "lhs", "op", "rhs", "n_clusters", "mi.pooled", "df.pooled", "p.value", "p.value.adj", "median_sepc.all", "n_sepc", "proportion_epc_positive"
 )]
-
-head(
-  pooled_mi_metric[
-    order(-pooled_mi_metric$mi.pooled),
-  ],
-  30
-)
-
 ```
 
 ```{r}
@@ -231,15 +224,20 @@ top_candidate_metric
 fits_metric <- cluster_lavaan_fits(metric_results)
 contributing_clusters_metric <- pooled_mi_metric$clusters[[1]]
 
-id <- contributing_clusters_metric[1]
+participant_mi_metric <- do.call(rbind, lapply(contributing_clusters_metric, function(id) {
+  fit <- fits_metric[[id]]
+  mi_metric <- lavaan::modindices(fit, op = top_candidate_metric$op)
+  keep <- mi_metric$lhs == top_candidate_metric$lhs &
+    mi_metric$op == top_candidate_metric$op &
+    mi_metric$rhs == top_candidate_metric$rhs
+  if (!any(keep)) return(NULL)
+  data.frame(
+    cluster = id,
+    mi = mi_metric$mi[keep][1],
+    sepc.all = mi$sepc.all[keep][1]
+  )
+}))
 
-fit <- fits_metric[[id]]
-
-mi <- lavaan::modindices(fit)
-head(mi)
+participant_mi_metric <- participant_mi_metric[is.finite(participant_mi_metric$mi), ]
+summary(participant_mi_metric[, c("mi", "sepc.all")])
 ```
-
-```{r}
-
-```
-
