@@ -183,6 +183,8 @@ lv_variance_results <- cluster_fit(
 )
 
 head(lv_variance_results)
+
+modindices(fit, sort = TRUE, min = 3.84)
 ```
 
 ```{r}
@@ -280,6 +282,25 @@ nrow(metric_results[metric_results$pvalue.swain.adj < .05, ])
 nrow(lv_variance_results[lv_variance_results$pvalue.swain.adj < .05, ])
 nrow(residuals_results[residuals_results$pvalue.swain.adj < .05, ])
 nrow(homogeneity_results[homogeneity_results$pvalue.swain.adj < .05, ])
+```
+```{r}
+subset(config_results)
+subset(config_results, rmsea < .06)
+```
+```{r}
+fits_metric <- cluster_lavaan_fits(metric_results)
+
+fits_metric <- fits_metric[vapply(fits_metric, inherits, logical(1), what = "lavaan")]
+dat_neu <- do.call(rbind, lapply(names(fits_metric), function(id) {
+  participant_data <- as.data.frame(lavaan::lavInspect(fits[[id]], "data"))
+  participant_data <- participant_data[, items, drop = FALSE]
+  participant_data$participant <- id
+  participant_data
+}))
+rownames(dat_neu) <- NULL
+
+mi <- lavaan::modindices(fits_metric)
+head(mi)
 ```
 
 

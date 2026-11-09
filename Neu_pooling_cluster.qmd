@@ -102,6 +102,7 @@ participant_mi <- do.call(rbind, lapply(contributing_clusters, function(id) {
 participant_mi <- participant_mi[is.finite(participant_mi$mi), ]
 summary(participant_mi[, c("mi", "sepc.all")])
 ```
+
 ```{r}
 old_par <- par(mfrow = c(2, 1))
 participant_id <- as.numeric(as.character(participant_mi$cluster))
@@ -183,5 +184,62 @@ rbind(
   data.frame(model = "freed path", freed_pooled)
 )
 ```
+```{r}
+subset(config_results, rmsea.robust.swain > 0.060)
+subset(neu_freed, rmsea.robust > 0.060)
+```
 
+
+-------------------------
+-------------------------
+```{r}
+metric_results <- cluster_fit(
+  fit,
+  fit_measures = c("chisq.scaled", "rmsea.robust", "cfi.robust", "srmr"),
+  constraint = "loading",
+  check.gradient = FALSE,
+  warn = FALSE,
+  likelihood = "normal",
+  return_lavaan = TRUE
+)
+
+metric_results
+
+subset(metric_results, rmsea.robust.swain >.06)
+```
+```{r}
+pooled_mi_metric <- pool_cluster_mi(metric_results, op = "=~")
+pooled_mi_metric[, c(
+  "lhs", "op", "rhs", "n_clusters", "mi.pooled", "df.pooled", "p.value", "p.value.adj", "median_sepc.all", "n_sepc", "proportion_epc_positive"
+)]
+
+head(
+  pooled_mi_metric[
+    order(-pooled_mi_metric$mi.pooled),
+  ],
+  30
+)
+
+```
+
+```{r}
+top_candidate_metric <- pooled_mi_metric[1, c("lhs", "op", "rhs")]
+top_candidate_metric
+```
+
+```{r}
+fits_metric <- cluster_lavaan_fits(metric_results)
+contributing_clusters_metric <- pooled_mi_metric$clusters[[1]]
+
+id <- contributing_clusters_metric[1]
+
+fit <- fits_metric[[id]]
+
+mi <- lavaan::modindices(fit)
+head(mi)
+```
+
+```{r}
+
+```
 
