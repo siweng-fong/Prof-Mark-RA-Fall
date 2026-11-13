@@ -1,0 +1,181 @@
+---
+title: "Alignment_Neu"
+format: html
+editor: visual
+---
+
+```{r}
+library(clustinvar)
+library(lavaan)
+library(sirt)
+```
+```{r}
+dat_neu <- openesm::get_dataset("0001_fried")$data[, c("id", 
+"scheduled", "issued", "response", "difficulties_relaxing", "irritable", "worry", "nervous")]
+
+head(dat_neu)
+```
+```{r}
+dat_neu <- dplyr::rename(dat_neu,
+              neu.1 = difficulties_relaxing,
+              neu.2 = irritable,
+              neu.3 = worry,
+              neu.4 = nervous)
+```
+
+```{r}
+model <- '
+level: 1
+fw =~ neu.1 + neu.2 + neu.3 + neu.4
+neu.1 ~~ neu.2
+
+level:2
+neu.1 ~~ neu.2 + neu.3 + neu.4
+neu.2 ~~ neu.3 + neu.4
+neu.3 ~~ neu.4
+'
+
+items <- c("neu.1", "neu.2", "neu.3", "neu.4")
+
+fit <- cfa(
+  model,
+  data = dat_neu,
+  cluster = "id",
+  estimator = "MLR",
+  missing = "FIML"
+)
+```
+```{r}
+summary(fit, fit.measures = TRUE)
+```
+```{r}
+saveRDS(summary(fit, fit.measures = TRUE), "neu_fit_summary.rds")
+```
+
+```{r}
+config_fit_6 <- cfa(
+    " fw =~ neu.1 + neu.2 + neu.3 + neu.4",
+    data = subset(lavInspect(fit, "data"), lavInspect(fit, "cluster.idx") == 6),
+    missing = "fiml",
+    estimator = "MLR",
+    se = "none"
+)
+config_fit_6
+```
+
+
+```{r}
+config_fit_6 <- cfa(
+    " fw =~ neu.1 + neu.2 + neu.3 + neu.4 ",
+    data = subset(lavInspect(fit, "data"), lavInspect(fit, "cluster.idx") == 6),
+    missing = "fiml",
+    estimator = "MLR",
+    information = "expected",
+    se = "none"
+)
+config_fit_6
+```
+```{r}
+pool_cluster_chisq(config_results)
+```
+
+```{r}
+subset(
+    config_results[order(config_results$chisq.scaled.swain, decreasing = TRUE), , drop = FALSE],
+    pvalue.scaled.swain.adj < 0.05
+)
+```
+```{r}
+within_cluster_fit <- cluster_fit(
+  fit,
+  fit_measures = c("chisq.scaled", "rmsea.robust", "cfi.robust", "srmr"),
+  constraint = "all",
+  check.gradient = FALSE,
+  warn = FALSE
+)
+
+head(within_cluster_fit)
+```
+```{r}
+saveRDS(within_cluster_fit, "neu_within_cluster_fit.rds")
+```
+
+```{r}
+pool_cluster_chisq(within_cluster_fit)
+```
+
+```{r}
+# Plot the distribution of RMSEA across clusters
+hist(within_cluster_fit$rmsea.robust.swain, main = "Distribution of RMSEA across clusters", xlab = "RMSEA", breaks = 41)
+```
+```{r}
+config_results2 <- cluster_fit(
+  fit,
+  fit_measures = c("chisq.scaled", "rmsea.robust", "cfi.robust", "srmr"),
+  constraint = "none",
+  check.gradient = FALSE,
+  warn = FALSE,
+  return_lavaan = TRUE
+)
+```
+```{r}
+saveRDS(config_results2, "neu_config_results2.rds")
+```
+
+```{r}
+good_clusters <- filter_clusters(config_results2, rmsea_cutoff = .06)$cluster
+
+message(
+  "Using ", length(good_clusters),
+  " of ", nrow(config_results2),
+   " clusters (corrected RMSEA <= 0.06)"
+)
+
+fits <- cluster_lavaan_fits(config_results2)
+items <- c("neu.1", "neu.2", "neu.3", "neu.4")
+G <- length(good_clusters)
+
+lambda <- matrix(NA_real_, nrow = G, ncol = 4)
+nu     <- matrix(NA_real_, nrow = G, ncol = 4)
+psi    <- rep(NA_real_, G)
+
+rownames(lambda) <- good_clusters
+rownames(nu)     <- good_clusters
+colnames(lambda) <- items
+colnames(nu)     <- items
+
+for (i in seq_along(good_clusters)) {
+  cl   <- good_clusters[i]
+  fit_i <- fits[[as.character(cl)]]
+  pa <- parameterEstimates(fit_i)
+
+  psi_row <- pa[pa$lhs == "fw" & pa$op == "~~" & pa$rhs == "fw", ]
+  if (psi_row$est[[1]] < 0) {
+    warning("Negative latent variance for cluster ", cl, ": ", psi_row$est[[1]])
+    next
+  }
+  psi[i] <- psi_row$est[[1]]
+
+  for (j in seq_along(items)) {
+    row <- pa[pa$lhs == "fw" & pa$op == "=~" & pa$rhs == items[j], ]
+    lambda[i, j] <- row$est[[1]]
+  }
+
+  for (j in seq_along(items)) {
+    row <- pa[pa$lhs == items[j] & pa$op == "~1" & pa$rhs == "", ]
+    nu[i, j] <- row$est[[1]]
+  }
+}
+
+# Standardize marker-identified loadings to unit factor variance for alignment.
+lambda_std <- lambda * sqrt(psi)
+
+alignment <- invariance.alignment(lambda = lambda_std, nu = nu, meth = 3)
+
+summary(alignment)
+
+# Aligned group-level factor variances (psi_g) and means (alpha_g)
+alignment$pars$psi0
+alignment$pars$alpha0
+```
+

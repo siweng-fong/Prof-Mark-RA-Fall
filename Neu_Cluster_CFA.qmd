@@ -289,6 +289,8 @@ subset(config_results, rmsea < .06)
 ```
 ```{r}
 fits_metric <- cluster_lavaan_fits(metric_results)
+mi <- lavaan::modindices(fits_metric)
+head(mi)
 
 fits_metric <- fits_metric[vapply(fits_metric, inherits, logical(1), what = "lavaan")]
 dat_neu <- do.call(rbind, lapply(names(fits_metric), function(id) {
