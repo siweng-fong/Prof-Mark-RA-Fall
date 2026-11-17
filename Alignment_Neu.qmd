@@ -123,7 +123,7 @@ saveRDS(config_results2, "neu_config_results2.rds")
 ```
 
 ```{r}
-good_clusters <- filter_clusters(config_results2, rmsea_cutoff = .06)$cluster
+good_clusters <- config_results$cluster[which(config_results2$pvalue.swain.adj > .05 & config_results2$admissible)]
 
 message(
   "Using ", length(good_clusters),
@@ -179,3 +179,5 @@ alignment$pars$psi0
 alignment$pars$alpha0
 ```
 
+# 1. find the modification index of the five clusters when the freed path has not been freed (neu.1 ~~ neu.2), to see if there are any specific path that needed to be freed for that five specific cluster
+# 3. do once for each item (calculating the average latent variance of clusters for each of the item)
