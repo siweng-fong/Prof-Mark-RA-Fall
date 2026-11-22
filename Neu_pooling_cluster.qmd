@@ -55,6 +55,7 @@ fit <- cfa(
 modindices(fit, sort = TRUE, min = 3.84)
 ```
 
+
 ```{r}
 config_results <- cluster_fit(
   fit,
@@ -70,6 +71,8 @@ saveRDS(config_results, "neu_config_results_pooling.rds")
 
 config_results
 ```
+
+
 ```{r}
 pooled_mi <- pool_cluster_mi(config_results, op = "~~")
 pooled_mi[, c(
@@ -84,6 +87,13 @@ top_candidate
 
 ```{r}
 fits <- cluster_lavaan_fits(config_results)
+-------------
+modindices(fits[[20]])
+modindices(fits[[21]])
+modindices(fits[[55]])
+modindices(fits[[66]])
+modindices(fits[[77]])
+-------------
 contributing_clusters <- pooled_mi$clusters[[1]]
 
 participant_mi <- do.call(rbind, lapply(contributing_clusters, function(id) {
@@ -103,6 +113,13 @@ participant_mi <- do.call(rbind, lapply(contributing_clusters, function(id) {
 participant_mi <- participant_mi[is.finite(participant_mi$mi), ]
 summary(participant_mi[, c("mi", "sepc.all")])
 ```
+----------
+```{r}
+
+```
+----------
+```
+
 
 ```{r}
 old_par <- par(mfrow = c(2, 1))
