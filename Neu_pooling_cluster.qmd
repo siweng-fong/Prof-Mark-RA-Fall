@@ -79,6 +79,10 @@ pooled_mi[, c(
   "lhs", "op", "rhs", "n_clusters", "mi.pooled", "df.pooled", "p.value", "p.value.adj", "median_sepc.all", "n_sepc", "proportion_epc_positive"
 )]
 ```
+```{r}
+
+```
+
 
 ```{r}
 top_candidate <- pooled_mi[2, c("lhs", "op", "rhs")]
@@ -282,3 +286,18 @@ plot(
 )
 points(participant_id_metric, participant_mi_metric$sepc.all, pch = 1, col = "darkorange")
 ```
+
+```{r}
+int_part_Agency_mat <- matrix(intercepts.partial_Agency$est[1:20], nrow = 5) |> t()
+ld_part_Agency_mat <- matrix(load.partial_Agency$est[1:20], nrow = 5) |> t()
+avg_sds_part_Agency <-  dat_example[2:21] |> apply(2, var, na.rm = TRUE) |>
+  matrix(nrow = 5) |>
+  rowMeans() |>
+  sqrt()
+pinsearch::fmacs(
+    intercepts = int_part_Agency_mat,
+    loadings = ld_part_Agency_mat,
+    pooled_item_sd = avg_sds_part_Agency  # update SD
+)
+```
+

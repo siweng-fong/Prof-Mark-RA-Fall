@@ -97,6 +97,22 @@ within_cluster_fit <- cluster_fit(
 head(within_cluster_fit)
 ```
 ```{r}
+fmac.in.ld <- parameterEstimates(fit)
+
+nu <- matrix(fmac.in.ld$est[1:4], nrow = 4) |> t()
+lambda <- matrix(fmac.in.ld$est[11:14], nrow = 4) |> t()
+avg_sds <-  dat_neu[5:8] |> apply(2, var, na.rm = TRUE) |>
+  matrix(nrow = 4) |>
+  rowMeans() |>
+  sqrt()
+pinsearch::fmacs(
+    intercepts = nu,
+    loadings = lambda,
+    pooled_item_sd = avg_sds  # update SD
+)
+```
+
+```{r}
 saveRDS(within_cluster_fit, "neu_within_cluster_fit.rds")
 ```
 
