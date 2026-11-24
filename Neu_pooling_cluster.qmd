@@ -79,10 +79,6 @@ pooled_mi[, c(
   "lhs", "op", "rhs", "n_clusters", "mi.pooled", "df.pooled", "p.value", "p.value.adj", "median_sepc.all", "n_sepc", "proportion_epc_positive"
 )]
 ```
-```{r}
-
-```
-
 
 ```{r}
 top_candidate <- pooled_mi[2, c("lhs", "op", "rhs")]
@@ -92,20 +88,27 @@ top_candidate
 ```{r}
 fits <- cluster_lavaan_fits(config_results)
 
-fits <- fits[!sapply(fits, is.null)]
+# fits <- fits[!sapply(fits, is.null)]
 
-all_pars <- lapply(seq_along(fits), function(i) {
-  parameterEstimates(fits[[i]])
-})
+for(i in unique(all_loadings_df$cluster)){
+
+}
+for(i in unique(all_intercepts_df$cluster)){
+
+}
+
+# all_pars <- lapply(seq_along(fits), function(i) {
+#   parameterEstimates(fits[[i]])
+# })
 
 #loading of each cluster
 
-all_loadings <- lapply(fits, function(fit) {
-  subset(
-    parameterEstimates(fit),
-    op == "=~"
-  )
-})
+# all_loadings <- lapply(fits, function(fit) {
+#   subset(
+#     parameterEstimates(fit),
+#     op == "=~"
+#   )
+# })
 
 all_loadings_df <- do.call(
   rbind,
@@ -118,16 +121,16 @@ all_loadings_df <- do.call(
 )
 
 #intrcept of each cluster
-all_intercepts <- lapply(fits, function(fit) {
-  subset(
-    parameterEstimates(fit),
-    op == "~1"
-  )
-})
+# all_intercepts <- lapply(fits, function(fit) {
+#   subset(
+#     parameterEstimates(fit),
+#     op == "~1"
+#   )
+# })
 
 all_intercepts_df <- do.call(
   rbind,
-  lapply(seq_along(all_loadings), function(i){
+  lapply(seq_along(all_intercepts), function(i){
     cbind(
       cluster = i,
       all_loadings[[i]]
@@ -136,27 +139,40 @@ all_intercepts_df <- do.call(
 )
 
 #calculation of fmac
-nu <- matrix(all_intercepts_df$est[1:4], nrow = 4) |> t()
-lambda <- matrix(all_loadings_df$est[11:14], nrow = 4) |> t()
-avg_sds <-  dat_neu[5:8] |> apply(2, var, na.rm = TRUE) |>
-  matrix(nrow = 4) |>
-  rowMeans() |>
-  sqrt()
+lambda <- matrix(
+  all_loadings_df$est,
+  ncol = 4,
+  byrow = TRUE
+)
+
+nu <- matrix(
+  all_intercepts_df$est,
+  ncol = 4,
+  byrow = TRUE
+)
+
+dim(lambda)
+dim(nu)
+
+avg_sds <- dat_neu |>
+  dplyr::filter(id == i) |>
+  dplyr::select(neu.1:neu.4) |>
+  apply(2, sd, na.rm = TRUE)
+
 pinsearch::fmacs(
     intercepts = nu,
     loadings = lambda,
     pooled_item_sd = avg_sds  # update SD
 )
 
-
 all_var <- sapply(
   items,
-  function(x)
-    tapply(dat_neu[[x]], dat_neu$cluster_id, var, na.rm = TRUE)
+  function(i)
+    tapply(dat_neu[[i]], dat_neu$id, var, na.rm = TRUE)
 )
 
-all_var
-tapply: tapply(dat_neu$var, dat_neu$id, var, na.rm = TRUE))
+avg_var_between_cluster <- colMeans(all_var, na.rm = TRUE)
+avg_var_between_cluster
 -------------
 modindices(fits[[20]])
 modindices(fits[[21]])
@@ -184,9 +200,7 @@ participant_mi <- participant_mi[is.finite(participant_mi$mi), ]
 summary(participant_mi[, c("mi", "sepc.all")])
 ```
 ----------
-```{r}
 
-```
 ----------
 ```
 
